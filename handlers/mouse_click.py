@@ -8,7 +8,7 @@ from app_state import AppState
 def mouse_event_handler(
     event, loop: asyncio.AbstractEventLoop, client: WebOsClient, app_state: AppState
 ):
-    if not app_state.in_webos():
+    if app_state.reconnecting or not app_state.in_webos() or not client.is_connected():
         return
 
     if isinstance(event, mouse.ButtonEvent):
