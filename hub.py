@@ -31,15 +31,15 @@ async def main():
     await client.connect()
 
     def request_shutdown():
-        if not shutdown_future.done():
-            # set the running flag to False to stop the mouse polling thread
+        if app_state.running:
             app_state.running = False
+
+        if not shutdown_future.done():
             loop.call_soon_threadsafe(shutdown_future.set_result, None)
 
     async def app_changed(app_id: str):
         app_state.last_app = app_state.current_app
         app_state.current_app = app_id
-        print(f"Current app: {app_id}")
 
         if (
             not app_state.in_webos()
@@ -50,7 +50,26 @@ async def main():
                 print("App not in webOS, shutting down...")
                 request_shutdown()
 
-    await client.subscribe_current_app(app_changed)
+    async def app_monitor(app_state: AppState):
+        """Manually poll the current app state, since the WebOS TV does not 
+        provide a reliable event for this (`subscribe_current_app` is not reliable)."""
+        while app_state.running:
+            try:
+                app: str = await client.get_current_app()  # type: ignore
+
+                if app != app_state.current_app:
+                    print(f"App changed: {app_state.current_app} -> {app}")
+                    await app_changed(app)
+
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                if app_state.running:
+                    print(f"Failed to get current app: {e}")
+
+            await asyncio.sleep(1)  # Poll every second
+
+    app_monitor_task = asyncio.create_task(app_monitor(app_state))
 
     # HOME page on start
     initial_command = sys.argv[1] if len(sys.argv) > 1 else "HOME"
@@ -73,10 +92,22 @@ async def main():
     try:
         await shutdown_future
     finally:
+        # Stop everyone first
+        app_state.running = False
+
+        # Stop new events arriving
         keyboard.unhook_all()
         mouse.unhook_all()
-        if client is not None:
-            await client.disconnect()
+
+        # Stop polling task
+        app_monitor_task.cancel()
+        try:
+            await app_monitor_task
+        except asyncio.CancelledError:
+            pass
+
+        # Disconnect last
+        await client.disconnect()
 
 
 if __name__ == "__main__":
