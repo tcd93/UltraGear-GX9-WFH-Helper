@@ -21,17 +21,7 @@ async def main():
 
     await client.connect()
 
-    current = await client.get_input()
-
-    print("Current input:", current)
-
-    current_id = None
-
-    # Different versions of aiowebostv return different shapes
-    if isinstance(current, dict):
-        current_id = current.get("id") or current.get("appId")
-    elif isinstance(current, str):
-        current_id = current
+    current_id: str = await client.get_input() # type: ignore
 
     print("Current ID:", current_id)
 
@@ -42,10 +32,12 @@ async def main():
 
     print("Switching to:", target)
 
-    result = await client.set_input(target)
-    print(result)
-
-    await client.disconnect()
+    try:
+        result = await client.set_input(target)
+    except Exception as e:
+        print(f"Error setting input: {e}")
+    finally:
+        await client.disconnect()
 
 
 asyncio.run(main())
