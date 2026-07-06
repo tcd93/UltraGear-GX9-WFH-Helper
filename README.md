@@ -18,18 +18,18 @@ This project helps with that by letting me switch inputs and control the monitor
 
 Site note: To complete this WFH set up, I also have Mouse Without Borders installed on both devices, so I can seamlessly move the mouse and keyboard between them.
 
-## What you need to enable on the monitor
-
-The monitor must have these settings turned on (settings > support)
-
-- SSDP discovery
-- Network IP Control
-
 ## Tested monitor
 
 This was tested on an LG 34GX90SA-W.
 
 > Note: if you have multiple Smart LG GX90 on home network with SSDP enabled, the automatic discovery step may pick the wrong one.
+
+## Settings you need to set up
+
+The monitor must have this settings turned on (settings > support)
+
+- SSDP discovery (should be turned off later after setting a fixed IP)
+- Network IP Control
 
 ## Setup
 
@@ -69,7 +69,9 @@ This was tested on an LG 34GX90SA-W.
 
    This file is ignored by Git.
 
-6. Run the scripts.
+6. After a first time run, you should also see a `cache.json` file created. This file is also ignored by Git, and contains the monitor's IP address. For best possible experience and to prevent all sorts of bugs, **I strongly recommend you use 5Ghz WIFI or LAN cable and set a static IP for the monitor in Settings > Wifi Icon**. You can set it to the same IP as in `cache.json`.
+
+7. Run the scripts.
 
    ```powershell
    python hub.py HOME
