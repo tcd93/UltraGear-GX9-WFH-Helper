@@ -6,27 +6,6 @@ from aiowebostv import WebOsClient
 
 from app_state import AppState
 
-
-ERROR_LOG_INTERVAL_SECONDS = 2.0
-_last_error_log_by_message: dict[str, float] = {}
-
-
-def _log_future_exception(future: Future):
-    try:
-        exception = future.exception()
-    except Exception:
-        return
-
-    if exception is None:
-        return
-
-    now = time.monotonic()
-    message = str(exception)
-    last_logged = _last_error_log_by_message.get(message, 0.0)
-    if now - last_logged >= ERROR_LOG_INTERVAL_SECONDS:
-        _last_error_log_by_message[message] = now
-        print(exception)
-
 HOTKEYS = {
     "home": "HOME",
     "up": "UP",
@@ -102,7 +81,7 @@ def send_button(button: str, loop: asyncio.AbstractEventLoop, client: WebOsClien
         loop,
     )
 
-    future.add_done_callback(_log_future_exception)
+    future.add_done_callback(lambda f: print(f.exception()) if f.exception() else None)
 
 
 def send_ime_text(
@@ -134,7 +113,7 @@ def send_ime_text(
             loop,
         )
 
-    future.add_done_callback(_log_future_exception)
+    future.add_done_callback(lambda f: print(f.exception()) if f.exception() else None)
 
 
 def normalize_key_text(event) -> str | None:
