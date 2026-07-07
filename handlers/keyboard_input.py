@@ -4,8 +4,6 @@ from concurrent.futures import Future
 import keyboard
 from aiowebostv import WebOsClient
 
-from app_state import AppState
-
 HOTKEYS = {
     "home": "HOME",
     "up": "UP",
@@ -18,19 +16,11 @@ HOTKEYS = {
 }
 
 
-def keyboard_input_handler(
+async def keyboard_input_handler(
     event: keyboard.KeyboardEvent,
-    loop: asyncio.AbstractEventLoop,
     client: WebOsClient,
-    app_state: AppState,
 ):
     if event.event_type != "down":
-        return
-
-    if app_state.reconnecting:
-        return
-
-    if not app_state.in_webos():
         return
 
     if not client.is_connected():
@@ -38,11 +28,11 @@ def keyboard_input_handler(
 
     # PROBLEM: hotkeys might conflict with text input.
     # This should be called before `send_button`
-    send_ime_text(event, loop, client)
+    await send_ime_text(event, client)
 
     # navigation keys
     if event.name in HOTKEYS:
-        send_button(HOTKEYS[event.name], loop, client)
+        await send_button(HOTKEYS[event.name], client)
 
     return
 
@@ -72,21 +62,15 @@ SHIFT_CHAR_MAP = {
 }
 
 
-def send_button(button: str, loop: asyncio.AbstractEventLoop, client: WebOsClient):
+async def send_button(button: str, client: WebOsClient):
     if not client.is_connected():
         return
 
-    future = asyncio.run_coroutine_threadsafe(
-        client.button(button),
-        loop,
-    )
-
-    future.add_done_callback(lambda f: print(f.exception()) if f.exception() else None)
+    await client.button(button)
 
 
-def send_ime_text(
+async def send_ime_text(
     event: keyboard.KeyboardEvent,
-    loop: asyncio.AbstractEventLoop,
     client: WebOsClient,
 ):
     """https://www.webosose.org/docs/reference/ls2-api/com-webos-service-ime"""
@@ -95,25 +79,14 @@ def send_ime_text(
         return
 
     if event.name == "backspace":
-        future = asyncio.run_coroutine_threadsafe(
-            client.request("com.webos.service.ime/deleteCharacters", {"count": 1}),
-            loop,
-        )
+        await client.request("com.webos.service.ime/deleteCharacters", {"count": 1})
     elif event.name == "enter":
-        future = asyncio.run_coroutine_threadsafe(
-            client.request("com.webos.service.ime/sendEnterKey"),
-            loop,
-        )
+        await client.request("com.webos.service.ime/sendEnterKey", {})
     else:
         text = normalize_key_text(event)
         if text is None:
             return
-        future = asyncio.run_coroutine_threadsafe(
-            client.request("com.webos.service.ime/insertText", {"text": text}),
-            loop,
-        )
-
-    future.add_done_callback(lambda f: print(f.exception()) if f.exception() else None)
+        await client.request("com.webos.service.ime/insertText", {"text": text})
 
 
 def normalize_key_text(event) -> str | None:
