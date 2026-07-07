@@ -1,6 +1,5 @@
 import asyncio
 import os
-import threading
 from pathlib import Path
 
 import keyboard
@@ -61,7 +60,9 @@ async def main():
 
     def update_input_mode():
         should_capture = (
-            app_state.in_webos() and client.is_connected() and not app_state.reconnecting
+            app_state.in_webos()
+            and client.is_connected()
+            and not app_state.reconnecting
         )
         set_keyboard_capture(should_capture)
 
@@ -126,20 +127,46 @@ async def main():
                         RECONNECT_MAX_BACKOFF_SECONDS,
                     )
 
+    async def move_sender_worker():
+        while app_state.running:
+            await asyncio.sleep(1 / 120.0)
+
+            if app_state.move_in_flight:
+                continue
+
+            if (
+                app_state.reconnecting
+                or not app_state.in_webos()
+                or not client.is_connected()
+            ):
+                app_state.latest_move_delta = None
+                continue
+
+            pending_move = app_state.latest_move_delta
+            if pending_move is None:
+                continue
+
+            app_state.latest_move_delta = None
+            dx, dy = pending_move
+
+            app_state.move_in_flight = True
+            try:
+                await client.move(dx, dy)
+            except Exception as exc:
+                print(exc)
+            finally:
+                app_state.move_in_flight = False
+
     if not await connect_and_subscribe():
         request_shutdown()
 
     reconnect_task = asyncio.create_task(reconnect_monitor())
+    move_sender_task = asyncio.create_task(move_sender_worker())
+    mouse_polling_task = asyncio.create_task(mouse_pos_polling(client, app_state))
 
     set_keyboard_capture(False)
 
     update_input_mode()
-
-    threading.Thread(
-        target=mouse_pos_polling,
-        args=(loop, client, app_state),
-        daemon=True,
-    ).start()
 
     mouse.hook(lambda event: mouse_event_handler(event, loop, client, app_state))
 
@@ -149,8 +176,20 @@ async def main():
         app_state.running = False
 
         reconnect_task.cancel()
+        move_sender_task.cancel()
+        mouse_polling_task.cancel()
         try:
             await reconnect_task
+        except asyncio.CancelledError:
+            pass
+
+        try:
+            await move_sender_task
+        except asyncio.CancelledError:
+            pass
+
+        try:
+            await mouse_polling_task
         except asyncio.CancelledError:
             pass
 
