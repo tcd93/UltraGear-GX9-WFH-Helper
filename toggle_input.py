@@ -14,6 +14,8 @@ HOST = get_monitor_ip()
 CLIENT_KEY = os.getenv("LG_MONITOR_CLIENT_KEY", "")
 
 DP = "DisplayPort_1"
+HDMI1 = "HDMI_1"
+HDMI2 = "HDMI_2"
 USB = "USB-C_1"
 
 async def main():
@@ -25,10 +27,10 @@ async def main():
 
     print("Current ID:", current_id)
 
-    if current_id in (DP, "com.webos.app.dp1"):
+    if current_id in (HDMI2, "com.webos.app.hdmi2"):
         target = USB
     else:
-        target = DP
+        target = HDMI2
 
     print("Switching to:", target)
 

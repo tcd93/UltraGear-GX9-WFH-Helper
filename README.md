@@ -3,14 +3,14 @@
 ## What it does
 
 - Lets you use keyboard and mouse inputs without having to connect them to the monitor directly
-- Lets you quickly switch the monitor between DisplayPort and USB-C input
+- Lets you quickly switch the monitor between HDMI2 and USB-C input
 
 ## Why I built it
 
 My setup is:
 
 - Laptop connected through USB-C
-- Personal PC connected through DisplayPort, peripherals connected to this PC
+- Personal PC connected through HDMI2, peripherals connected to this PC
 
 As the LG UltraGear GX9 line do not have an usb-b port, peripherals connected to the monitor only work with the laptop. This makes it awkward when I want the PC to be the "main" while still using the same keyboard and mouse. (I should've read the manual carefully before spending 1000$ lol - but anyways, WebOS does come with a very convenient API).
 
